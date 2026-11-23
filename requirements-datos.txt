@@ -1,0 +1,5 @@
+# Solo para regenerar datos/ (descargar_datos.py, preparar.py, analisis.py)
+-r requirements.txt
+pandas>=2.1,<3
+pyarrow>=14
+huggingface_hub>=0.23
