@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Recuperación de Información · FiQA</title>
+<style>
+  :root{
+    --bg:#f5f5f7; --surface:#ffffff; --surface-2:#fbfbfd; --ink:#1d1d1f; --mute:#6e6e73; --faint:#86868b;
+    --line:rgba(0,0,0,.08); --line-strong:rgba(0,0,0,.14); --acc:#0071e3; --acc-ink:#ffffff;
+    --glass:rgba(245,245,247,.72); --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --good:#248a3d; --bad:#d70015; --mark:rgba(0,113,227,.14); --radius:18px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#000000; --surface:#1c1c1e; --surface-2:#161618; --ink:#f5f5f7; --mute:#a1a1a6; --faint:#86868b;
+      --line:rgba(255,255,255,.1); --line-strong:rgba(255,255,255,.18); --acc:#2997ff; --acc-ink:#ffffff;
+      --glass:rgba(0,0,0,.62); --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+      --good:#30d158; --bad:#ff453a; --mark:rgba(41,151,255,.3);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-padding-top:72px}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;letter-spacing:-.011em}
+  .vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  [hidden]{display:none!important}
+  :focus-visible{outline:3px solid color-mix(in srgb,var(--acc) 55%,transparent);outline-offset:2px;border-radius:10px}
+  button{font:inherit;color:inherit}
+
+  /* ---------- barra superior ---------- */
+  .top{position:sticky;top:0;z-index:20;background:var(--glass);
+    -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:1px solid var(--line)}
+  .top-in{max-width:1200px;margin:auto;padding:10px 24px;display:flex;align-items:center;gap:16px;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;white-space:nowrap}
+  .brand svg{width:22px;height:22px;color:var(--acc)}
+  .meta{font-size:13px;color:var(--faint);white-space:nowrap}
+  .seg{display:inline-flex;background:color-mix(in srgb,var(--faint) 18%,transparent);border-radius:11px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;padding:6px 16px;border-radius:9px;font-size:14px;font-weight:500;color:var(--mute);cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
+  .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+
+  main{max-width:1200px;margin:auto;padding:0 24px 72px}
+
+  /* ---------- portada de búsqueda ---------- */
+  .hero{text-align:center;padding:56px 0 28px}
+  .hero h1{font-size:clamp(30px,5vw,48px);line-height:1.08;letter-spacing:-.03em;font-weight:700;margin:0 auto 12px;max-width:780px}
+  .hero p{margin:0 auto;max-width:620px;font-size:clamp(16px,2vw,19px);color:var(--mute)}
+  .search{max-width:760px;margin:0 auto}
+  .field{position:relative;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);
+    border-radius:16px;padding:6px 6px 6px 16px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+  .field:focus-within{border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 22%,transparent)}
+  .field > svg{width:20px;height:20px;color:var(--faint);flex:none}
+  .field input[type=text]{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:18px;padding:12px 4px;outline:none}
+  .field input::placeholder{color:var(--faint)}
+  .clear{border:0;background:color-mix(in srgb,var(--faint) 30%,transparent);color:var(--surface);width:22px;height:22px;border-radius:50%;
+    display:grid;place-items:center;cursor:pointer;flex:none;font-size:14px;line-height:1}
+  .go{border:0;background:var(--acc);color:var(--acc-ink);padding:12px 22px;border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;transition:filter .15s,transform .05s;flex:none}
+  .go:hover{filter:brightness(1.08)} .go:active{transform:scale(.98)}
+  .go[aria-busy="true"]{filter:saturate(.7);cursor:progress}
+  .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:giro .8s linear infinite}
+  @keyframes giro{to{transform:rotate(360deg)}}
+  .opts{display:flex;flex-wrap:wrap;gap:14px 28px;justify-content:center;margin-top:18px}
+  fieldset{border:0;padding:0;margin:0;min-width:0}
+  legend{font-size:12px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;padding:0;margin:0 0 8px;text-align:center}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chip{position:relative;cursor:pointer}
+  .chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+  .chip span{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface);
+    border:1px solid var(--line-strong);font-size:14px;font-weight:500;color:var(--mute);transition:all .15s}
+  .chip i{width:9px;height:9px;border-radius:50%;background:var(--c);opacity:.45;transition:opacity .15s}
+  .chip input:checked + span{color:var(--ink);border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface))}
+  .chip input:checked + span i{opacity:1}
+  .chip input:focus-visible + span{outline:3px solid color-mix(in srgb,var(--acc) 55%,transparent);outline-offset:2px}
+  .seg.opt{padding:3px}
+  .seg.opt label{position:relative;cursor:pointer}
+  .seg.opt input{position:absolute;opacity:0;inset:0;cursor:pointer}
+  .seg.opt span{display:block;padding:6px 14px;border-radius:9px;font-size:14px;font-weight:500;color:var(--mute);min-width:42px;text-align:center;transition:all .15s}
+  .seg.opt input:checked + span{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .seg.opt input:focus-visible + span{outline:3px solid color-mix(in srgb,var(--acc) 55%,transparent)}
+  .hint{text-align:center;font-size:13px;color:var(--faint);margin:14px 0 0}
+  .err{max-width:760px;margin:14px auto 0;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--bad) 10%,var(--surface));
+    color:var(--bad);font-size:14px;border:1px solid color-mix(in srgb,var(--bad) 30%,transparent)}
+  .ejemplos{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px;align-items:center}
+  .ejemplos .lbl{font-size:13px;color:var(--faint);margin-right:4px}
+  .ej{border:1px solid var(--line-strong);background:transparent;padding:6px 12px;border-radius:999px;font-size:13px;color:var(--ink);cursor:pointer;transition:background .15s}
+  .ej:hover{background:var(--surface)}
+  kbd{font:inherit;font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:6px;padding:0 6px;color:var(--mute)}
+
+  /* ---------- resultados ---------- */
+  .status{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;align-items:baseline;margin:44px 0 6px}
+  .status h2{margin:0;font-size:24px;letter-spacing:-.02em;font-weight:700}
+  .status h2 em{font-style:normal;color:var(--mute);font-weight:500}
+  .status .sub{font-size:13px;color:var(--faint)}
+  .results{transition:opacity .2s}
+  .results.busy{opacity:.45;pointer-events:none}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px;align-items:start}
+  .col{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
+  .col-h{padding:16px 16px 12px;border-bottom:1px solid var(--line);position:relative}
+  .col-h::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--c)}
+  .col-h h3{margin:0;font-size:16px;font-weight:650;display:flex;align-items:center;gap:8px;letter-spacing:-.015em}
+  .col-h h3 i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+  .col-h p{margin:2px 0 0;font-size:12.5px;color:var(--faint);display:flex;justify-content:space-between;gap:8px}
+  .doc{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .doc:last-child{border-bottom:0}
+  .doc-h{display:flex;align-items:center;gap:8px;font-size:13px}
+  .rk{width:22px;height:22px;border-radius:50%;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+  .id{color:var(--mute);font-variant-numeric:tabular-nums}
+  .also{display:inline-flex;gap:3px;margin-left:2px}
+  .also i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .sc{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+  .meter{height:3px;border-radius:3px;background:var(--line);margin:8px 0 10px;overflow:hidden}
+  .meter i{display:block;height:100%;border-radius:3px;background:var(--c)}
+  .txt{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink)}
+  mark{background:var(--mark);color:inherit;border-radius:4px;padding:0 2px}
+  details.mas summary{cursor:pointer;list-style:none;font-size:13px;color:var(--acc);margin-top:8px;width:max-content}
+  details.mas summary::-webkit-details-marker{display:none}
+  details.mas[open] summary{display:none}
+  details.mas .full{margin:0;font-size:14.5px;line-height:1.5}
+  details.mas .cerrar{margin-top:8px;font-size:13px;color:var(--acc);cursor:pointer;background:none;border:0;padding:0}
+  .vacio{padding:28px 16px;text-align:center;color:var(--mute);font-size:14px}
+  .vacio-gran{text-align:center;padding:60px 20px;color:var(--mute)}
+  .vacio-gran strong{display:block;color:var(--ink);font-size:20px;margin-bottom:6px;letter-spacing:-.02em}
+  .legend{font-size:13px;color:var(--faint);margin:4px 0 0}
+
+  /* ---------- evaluación ---------- */
+  .ev-h{padding:48px 0 8px}
+  .ev-h h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.03em;margin:0 0 8px}
+  .ev-h p{margin:0;color:var(--mute);max-width:720px;font-size:17px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:28px 0 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 18px 16px;box-shadow:var(--shadow);position:relative}
+  .stat .n{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mute);font-weight:500}
+  .stat .n i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+  .stat .v{font-size:40px;font-weight:700;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:12.5px;color:var(--faint)}
+  .stat .top1{position:absolute;right:14px;top:14px;font-size:11px;font-weight:600;color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent);padding:2px 8px;border-radius:999px}
+  h2.sec{font-size:24px;letter-spacing:-.02em;margin:48px 0 6px;font-weight:700}
+  .lead{margin:0 0 14px;color:var(--mute);font-size:15px;max-width:760px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .bars .r{display:grid;grid-template-columns:130px 1fr 56px;gap:12px;align-items:center;margin:10px 0;font-size:14px}
+  .bars .b{height:10px;border-radius:6px;background:var(--c)}
+  .bars .track{background:var(--line);border-radius:6px}
+  .bars b{text-align:right;font-variant-numeric:tabular-nums}
+  .tw{overflow-x:auto;margin:0 -4px}
+  table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left} th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:0}
+  td.best{font-weight:700;color:var(--good)}
+  td.q{white-space:normal;min-width:240px;text-align:left}
+  .ayuda{margin-top:16px}
+  .ayuda summary,.mostrar summary{cursor:pointer;color:var(--acc);font-size:14px;font-weight:500}
+  .ayuda dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:12px 0 0;font-size:14px;color:var(--mute)}
+  .ayuda dt{color:var(--ink);font-weight:600}
+  .ayuda dd{margin:0}
+  .cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .cmp h3{margin:0 0 12px;font-size:17px;letter-spacing:-.015em}
+  .stack{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:6px 0 12px;background:var(--line)}
+  .stack i{display:block;height:100%}
+  .nums{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--mute)}
+  .nums b{display:block;font-size:26px;color:var(--ink);letter-spacing:-.02em}
+  .nums .g b{color:var(--good)} .nums .r b{color:var(--bad)}
+  .cmp .small{font-size:13px;color:var(--faint);margin:12px 0 0}
+  .filtro{width:100%;max-width:340px;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;margin:14px 0 8px}
+  .pq{max-height:520px;overflow:auto}
+  .foot{margin-top:56px;text-align:center;font-size:12.5px;color:var(--faint)}
+
+  @media (max-width:720px){
+    .top-in{padding:8px 16px;flex-wrap:wrap;justify-content:center} .meta{display:none}
+    main{padding:0 16px 56px} .hero{padding:36px 0 20px}
+    .field input[type=text]{font-size:16px} .go{padding:12px 16px}
+    .bars .r{grid-template-columns:96px 1fr 48px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+{% set colores = {'binario':'#af52de','tfidf':'#ff9500','bm25':'#30b0c7','embeddings':'#ff2d55'} %}
+{% set cortas = {'binario':'Binario','tfidf':'TF-IDF','bm25':'BM25','embeddings':'Embeddings'} %}
+{% set etiquetas = {'binario':'Binario (Jaccard)','tfidf':'Vectorial con TF-IDF','bm25':'Probabilístico (BM25)','embeddings':'Vectorial con embeddings'} %}
+{% set detalle = {'binario':'Jaccard sobre vectores binarios','tfidf':'Coseno con pesos TF-IDF','bm25':'Modelo probabilístico clásico','embeddings':'Semántico · MiniLM + FAISS'} %}
+{% set ayuda_modelo = {'binario':'Compara qué términos comparten consulta y documento, sin contar cuántas veces aparecen.','tfidf':'Pondera cada término por su frecuencia y su rareza, y mide el ángulo entre vectores.','bm25':'Puntúa por frecuencia del término con saturación y normaliza por la longitud del documento.','embeddings':'Compara el significado: convierte textos en vectores con un modelo preentrenado y busca los más cercanos.'} %}
+{% set seleccion = request.form.getlist('modelos') if request.method == 'POST' else modelos %}
+{% set n_sel = (request.form.get('n') or '5')|int %}
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      Recuperación de Información
+    </div>
+    <div class="seg" role="tablist" aria-label="Secciones">
+      <button role="tab" id="tb-search" aria-controls="tab-search" aria-selected="true" data-tab="search">Buscar</button>
+      <button role="tab" id="tb-metrics" aria-controls="tab-metrics" aria-selected="false" data-tab="metrics">Evaluación</button>
+    </div>
+    <div class="meta">FiQA-2018 · {{ "{:,}".format(docs|length).replace(",", ".") }} documentos</div>
+  </div>
+</header>
+
+<main>
+<!-- ================= BUSCAR ================= -->
+<section id="tab-search" role="tabpanel" aria-labelledby="tb-search">
+  <div class="hero">
+    <h1>Cuatro formas de encontrar la respuesta.</h1>
+    <p>Escribe una pregunta y compara cómo la resuelven un modelo binario, TF-IDF, BM25 y búsqueda semántica con embeddings.</p>
+  </div>
+
+  <form method="post" class="search" id="f" novalidate>
+    <div class="field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <label for="q" class="vh">Consulta de texto libre</label>
+      <input type="text" id="q" name="consulta" value="{{ consulta }}" placeholder="Ej.: how to invest in stocks" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="300">
+      <button type="button" class="clear" id="clear" aria-label="Borrar consulta" {% if not consulta %}hidden{% endif %}>×</button>
+      <button class="go" id="go" type="submit"><span class="spin" hidden></span><span class="lbl">Buscar</span></button>
+    </div>
+
+    <div class="opts">
+      <fieldset>
+        <legend>Modelos</legend>
+        <div class="chips">
+        {% for m in modelos %}
+          <label class="chip" style="--c:{{ colores[m] }}" title="{{ ayuda_modelo[m] }}">
+            <input type="checkbox" name="modelos" value="{{ m }}" {% if m in seleccion %}checked{% endif %}>
+            <span><i></i>{{ cortas[m] }}</span>
+          </label>
+        {% endfor %}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Resultados por modelo</legend>
+        <div class="seg opt">
+        {% for v in [3, 5, 10, 20] %}
+          <label><input type="radio" name="n" value="{{ v }}" {% if v == n_sel or (n_sel not in [3,5,10,20] and v == 5) %}checked{% endif %}><span>{{ v }}</span></label>
+        {% endfor %}
+        </div>
+      </fieldset>
+    </div>
+    <div id="err" class="err" role="alert" hidden></div>
+    <p class="hint">El corpus y el modelo semántico están en inglés: escribe la consulta en inglés. Atajo: <kbd>/</kbd> para buscar.</p>
+  </form>
+
+  {% if not consulta %}
+  <div class="ejemplos" aria-label="Consultas de ejemplo">
+    <span class="lbl">Prueba con</span>
+    {% for e in ['how to invest in stocks', 'what is a good credit score', 'pay off mortgage early or invest', 'difference between ETF and mutual fund'] %}
+      <button type="button" class="ej" data-q="{{ e }}">{{ e }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if consulta and not resultados %}
+    <div class="vacio-gran"><strong>Selecciona al menos un modelo</strong>Activa uno o más modelos arriba y vuelve a buscar.</div>
+  {% elif resultados %}
+  <div class="status" role="status">
+    <h2>Resultados <em>para «{{ consulta }}»</em></h2>
+    <span class="sub">{{ resultados|length }} {{ 'modelo' if resultados|length == 1 else 'modelos' }} · top-{{ n }}</span>
+  </div>
+  {% if resultados|length > 1 %}
+    <p class="legend">Los puntos de color junto a cada documento indican en qué otros modelos aparece. Las barras muestran la puntuación relativa al primer resultado de cada columna.</p>
+  {% endif %}
+
+  <div class="results" id="results">
+  <div class="grid">
+  {% for m, lista in resultados.items() %}
+    {% set t = (tiempos or {}).get(m) %}
+    {% set mx = lista[0][1] if lista else 1 %}
+    <section class="col" style="--c:{{ colores[m] }}" aria-label="{{ etiquetas[m] }}">
+      <div class="col-h">
+        <h3><i></i>{{ etiquetas[m] }}</h3>
+        <p><span>{{ detalle[m] }}</span>{% if t is not none %}<span>{{ ("%.1f"|format(t)) if t < 10 else ("%.0f"|format(t)) }} ms</span>{% endif %}</p>
+      </div>
+      {% for doc, score in lista %}
+        <article class="doc">
+          <div class="doc-h">
+            <span class="rk">{{ loop.index }}</span>
+            <span class="id">doc {{ doc }}</span>
+            {% set otros = [] %}
+            {% for m2, l2 in resultados.items() %}{% if m2 != m and doc in l2|map('first')|list %}{% set _ = otros.append(m2) %}{% endif %}{% endfor %}
+            {% if otros %}
+              {% set nombres = [] %}{% for m2 in otros %}{% set _ = nombres.append(cortas[m2]) %}{% endfor %}
+              <span class="also" title="También en: {{ nombres|join(', ') }}" role="img" aria-label="También en: {{ nombres|join(', ') }}">
+              {% for m2 in otros %}<i style="background:{{ colores[m2] }}"></i>{% endfor %}</span>{% endif %}
+            <span class="sc" title="Puntuación del modelo">{{ "%.3f"|format(score) }}</span>
+          </div>
+          <div class="meter" aria-hidden="true"><i style="width:{{ ((score / mx * 100) if mx > 0 else 0)|round|int }}%"></i></div>
+          <p class="txt">{{ docs[doc]|resaltar(consulta, 230) }}</p>
+          {% if docs[doc]|length > 230 %}
+          <details class="mas">
+            <summary>Ver texto completo</summary>
+            <p class="full">{{ docs[doc]|resaltar(consulta) }}</p>
+            <button type="button" class="cerrar">Ver menos</button>
+          </details>
+          {% endif %}
+        </article>
+      {% else %}
+        <div class="vacio">Ningún término de la consulta aparece en el corpus.<br>Prueba con otras palabras, en inglés.</div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+  </div>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ================= EVALUACIÓN ================= -->
+<section id="tab-metrics" role="tabpanel" aria-labelledby="tb-metrics" hidden>
+  {% set M = metricas.modelos %}
+  {% set A = metricas.analisis %}
+  {% set cols = ['MAP', 'MRR', 'NDCG@5', 'NDCG@10', 'NDCG@20', 'P@5', 'P@10', 'R@10', 'R@20', 'F1@10'] %}
+  {% set mejor = namespace(m=modelos[0], v=-1) %}
+  {% for m in modelos %}{% if M[m].resumen['MAP'] > mejor.v %}{% set mejor.m = m %}{% set mejor.v = M[m].resumen['MAP'] %}{% endif %}{% endfor %}
+  {% set mx = namespace(v=0.0001) %}
+  {% for m in modelos %}{% if M[m].resumen['NDCG@10'] > mx.v %}{% set mx.v = M[m].resumen['NDCG@10'] %}{% endif %}{% endfor %}
+
+  <div class="ev-h">
+    <h1>Evaluación</h1>
+    <p>{{ metricas.n_consultas }} consultas con juicios de relevancia (qrels) sobre {{ "{:,}".format(metricas.n_docs).replace(",", ".") }} documentos. Cuanto más alto, mejor.</p>
+  </div>
+
+  <div class="stats">
+    {% for m in modelos %}
+    <div class="stat" style="--c:{{ colores[m] }}">
+      {% if m == mejor.m %}<span class="top1">Mejor</span>{% endif %}
+      <div class="n"><i></i>{{ cortas[m] }}</div>
+      <div class="v">{{ "%.3f"|format(M[m].resumen['MAP']) }}</div>
+      <div class="k">MAP@100 · {{ ("%.1f"|format(M[m].resumen['ms'])) }} ms por consulta</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 class="sec">Calidad del ranking</h2>
+  <p class="lead">NDCG@10 premia que los documentos relevantes aparezcan en las primeras posiciones.</p>
+  <div class="card bars">
+    {% for m in modelos %}
+      <div class="r" style="--c:{{ colores[m] }}"><span>{{ cortas[m] }}</span>
+        <div class="track"><div class="b" style="width:{{ (M[m].resumen['NDCG@10'] / mx.v * 100)|round|int }}%"></div></div>
+        <b>{{ "%.3f"|format(M[m].resumen['NDCG@10']) }}</b></div>
+    {% endfor %}
+  </div>
+
+  <h2 class="sec">Todas las métricas</h2>
+  <p class="lead">MAP se calcula sobre los 100 primeros resultados. P@k, R@k, F1@k y NDCG@k son promedios por consulta; las posiciones sin resultado cuentan como no relevantes. En verde, el mejor de cada columna.</p>
+  <div class="card">
+    <div class="tw"><table>
+      <tr><th>Modelo</th>{% for c in cols %}<th>{{ c }}</th>{% endfor %}<th>ms</th></tr>
+      {% set best = {} %}
+      {% for c in cols %}{% set vals = [] %}{% for m2 in modelos %}{% set _ = vals.append(M[m2].resumen[c]) %}{% endfor %}{% set _ = best.update({c: vals|max}) %}{% endfor %}
+      {% for m in modelos %}
+        <tr><td>{{ etiquetas[m] }}</td>
+        {% for c in cols %}<td class="{{ 'best' if M[m].resumen[c] == best[c] }}">{{ "%.3f"|format(M[m].resumen[c]) }}</td>{% endfor %}
+        <td>{{ "%.1f"|format(M[m].resumen['ms']) }}</td></tr>
+      {% endfor %}
+    </table></div>
+    <details class="ayuda">
+      <summary>¿Qué significa cada métrica?</summary>
+      <dl>
+        <dt>Precision@k</dt><dd>De los k primeros resultados, qué fracción es relevante.</dd>
+        <dt>Recall@k</dt><dd>De todos los documentos relevantes, qué fracción aparece en los k primeros.</dd>
+        <dt>MAP</dt><dd>Promedio, sobre todas las consultas, de la precisión medida en cada documento relevante encontrado.</dd>
+        <dt>MRR</dt><dd>Promedio de 1/posición del primer documento relevante.</dd>
+        <dt>NDCG@k</dt><dd>Como la precisión, pero da más peso a los aciertos en posiciones altas.</dd>
+        <dt>F1@k</dt><dd>Media armónica entre precisión y recall.</dd>
+      </dl>
+    </details>
+  </div>
+
+  <h2 class="sec">Embeddings frente a los modelos léxicos</h2>
+  <p class="lead">Comparación consulta por consulta con {{ A.metrica }}; se considera que hay diferencia si supera {{ A.umbral }}.</p>
+  <div class="cmp">
+    {% for clave, nombre in [('emb_vs_bm25', 'BM25'), ('emb_vs_tfidf', 'TF-IDF')] %}
+      {% set c = A[clave] %}
+      {% set tot = c.mejora + c.empeora + c.similar %}
+      <div class="card">
+        <h3>Embeddings vs. {{ nombre }}</h3>
+        <div class="stack" role="img" aria-label="Mejoran en {{ c.mejora }}, empeoran en {{ c.empeora }}, similares en {{ c.similar }}">
+          <i style="width:{{ (c.mejora / tot * 100)|round(1) }}%;background:var(--good)"></i>
+          <i style="width:{{ (c.similar / tot * 100)|round(1) }}%;background:var(--faint);opacity:.45"></i>
+          <i style="width:{{ (c.empeora / tot * 100)|round(1) }}%;background:var(--bad)"></i>
+        </div>
+        <div class="nums">
+          <div class="g"><b>{{ c.mejora }}</b>mejoran</div>
+          <div><b>{{ c.similar }}</b>similares</div>
+          <div class="r"><b>{{ c.empeora }}</b>empeoran</div>
+        </div>
+        <p class="small">Diferencia media {{ "%+.3f"|format(c.dif_media) }} (IC 95 % por bootstrap: {{ "%+.3f"|format(c.ic95[0]) }} a {{ "%+.3f"|format(c.ic95[1]) }}). Si el intervalo incluye el 0, la diferencia no es concluyente.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% for clave, titulo in [('por_longitud', 'Por longitud de la consulta'), ('por_n_rel', 'Por número de documentos relevantes'), ('por_numeros', 'Por presencia de números')] %}
+    <h2 class="sec">{{ titulo }}</h2>
+    <p class="lead">{{ A.metrica }} medio por grupo de consultas.</p>
+    <div class="card"><div class="tw"><table>
+      <tr><th>Grupo</th><th>n</th>{% for m in modelos %}<th>{{ cortas[m] }}</th>{% endfor %}</tr>
+      {% for g, v in A[clave].items() %}
+        {% set vs = [] %}{% for m in modelos %}{% set _ = vs.append(v[m]) %}{% endfor %}
+        <tr><td>{{ g }}</td><td>{{ v.n }}</td>{% for m in modelos %}<td class="{{ 'best' if v[m] == vs|max }}">{{ "%.3f"|format(v[m]) }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table></div></div>
+  {% endfor %}
+
+  {% for clave, titulo in [('mejor_emb', 'Donde los embeddings más superan a BM25'), ('mejor_bm25', 'Donde BM25 más supera a los embeddings')] %}
+    <h2 class="sec">{{ titulo }}</h2>
+    <div class="card"><div class="tw"><table>
+      <tr><th>Consulta</th><th>Rel.</th><th>NDCG@10 BM25</th><th>NDCG@10 emb.</th><th>1.º BM25</th><th>1.º emb.</th></tr>
+      {% for e in A.ejemplos[clave] %}
+        <tr><td class="q">{{ e.consulta }}</td><td>{{ e.n_rel }}</td>
+          <td>{{ "%.2f"|format(e.ndcg_bm25) }}</td><td>{{ "%.2f"|format(e.ndcg_emb) }}</td>
+          <td title="{{ e.top1_bm25.texto if e.top1_bm25 }}">{{ '✓' if e.top1_bm25 and e.top1_bm25.relevante else '✗' }}</td>
+          <td title="{{ e.top1_embeddings.texto if e.top1_embeddings }}">{{ '✓' if e.top1_embeddings and e.top1_embeddings.relevante else '✗' }}</td></tr>
+      {% endfor %}
+    </table></div>
+    <p class="legend" style="margin-top:10px">✓ / ✗: si el primer resultado es relevante. Pasa el cursor sobre el símbolo para leer su texto.</p></div>
+  {% endfor %}
+
+  <h2 class="sec">Detalle por consulta</h2>
+  <div class="card mostrar">
+    <details>
+      <summary>Mostrar tabla (NDCG@10, P@10 y R@10 de cada modelo)</summary>
+      <label for="filtro" class="vh">Filtrar consultas</label>
+      <input type="search" id="filtro" class="filtro" placeholder="Filtrar consultas…" autocomplete="off">
+      <div class="pq"><table id="tpq">
+        <tr><th>Consulta</th><th>Rel.</th>{% for m in modelos %}<th>NDCG {{ cortas[m] }}</th><th>P</th><th>R</th>{% endfor %}</tr>
+        {% for i in range(M['bm25'].filas|length) %}
+          <tr><td class="q">{{ M['bm25'].filas[i].consulta }}</td><td>{{ M['bm25'].filas[i].n_rel }}</td>
+          {% for m in modelos %}{% set x = M[m].filas[i] %}
+            <td>{{ "%.2f"|format(x['NDCG@10']) }}</td><td>{{ "%.2f"|format(x['P@10']) }}</td><td>{{ "%.2f"|format(x['R@10']) }}</td>
+          {% endfor %}</tr>
+        {% endfor %}
+      </table></div>
+    </details>
+  </div>
+</section>
+
+<p class="foot">Binario (Jaccard) · TF-IDF · BM25 implementados sobre un índice invertido propio · Embeddings all-MiniLM-L6-v2 + FAISS</p>
+</main>
+
+<script>
+(function () {
+  var tabs = document.querySelectorAll('[role=tab]');
+  function show(name) {
+    tabs.forEach(function (b) {
+      var on = b.dataset.tab === name;
+      b.setAttribute('aria-selected', on);
+      document.getElementById('tab-' + b.dataset.tab).hidden = !on;
+    });
+    if (history.replaceState) history.replaceState(null, '', name === 'metrics' ? '#evaluacion' : location.pathname);
+    window.scrollTo(0, 0);
+  }
+  tabs.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.tab); }); });
+  if (location.hash === '#evaluacion') show('metrics');
+
+  var f = document.getElementById('f'), q = document.getElementById('q'), clear = document.getElementById('clear'),
+      err = document.getElementById('err'), go = document.getElementById('go');
+  function mensaje(t) { err.textContent = t; err.hidden = !t; }
+  q.addEventListener('input', function () { clear.hidden = !q.value; mensaje(''); });
+  clear.addEventListener('click', function () { q.value = ''; clear.hidden = true; q.focus(); });
+  f.addEventListener('change', function () { mensaje(''); });
+  f.addEventListener('submit', function (e) {
+    if (!q.value.trim()) { e.preventDefault(); mensaje('Escribe una consulta para buscar.'); q.focus(); return; }
+    if (!f.querySelector('input[name=modelos]:checked')) { e.preventDefault(); mensaje('Selecciona al menos un modelo.'); return; }
+    go.setAttribute('aria-busy', 'true');
+    go.querySelector('.spin').hidden = false;
+    go.querySelector('.lbl').textContent = 'Buscando…';
+    var r = document.getElementById('results'); if (r) r.classList.add('busy');
+  });
+  document.querySelectorAll('.ej').forEach(function (b) {
+    b.addEventListener('click', function () { q.value = b.dataset.q; f.requestSubmit ? f.requestSubmit() : f.submit(); });
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target.tagName;
+    if (e.key === '/' && t !== 'INPUT' && t !== 'TEXTAREA') { e.preventDefault(); show('search'); q.focus(); q.select(); }
+  });
+  document.querySelectorAll('details.mas .cerrar').forEach(function (b) {
+    b.addEventListener('click', function () { b.closest('details').open = false; });
+  });
+  window.addEventListener('pageshow', function () {           // al volver con "atrás" no deja el botón bloqueado
+    go.removeAttribute('aria-busy'); go.querySelector('.spin').hidden = true; go.querySelector('.lbl').textContent = 'Buscar';
+    var r = document.getElementById('results'); if (r) r.classList.remove('busy');
+  });
+  var filtro = document.getElementById('filtro');
+  if (filtro) filtro.addEventListener('input', function () {
+    var t = filtro.value.toLowerCase();
+    document.querySelectorAll('#tpq tr').forEach(function (tr, i) {
+      if (i === 0) return;
+      tr.hidden = t && tr.cells[0].textContent.toLowerCase().indexOf(t) < 0;
+    });
+  });
+})();
+</script>
+</body>
+</html>
