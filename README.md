@@ -2,15 +2,16 @@
 
 Proyecto de 1er Bimestre — Recuperación de Información (EPN). Compara cuatro modelos de recuperación sobre una **muestra del corpus FiQA-2018** (BEIR, preguntas y respuestas financieras en inglés) con una interfaz web. La muestra (15.000 documentos por defecto) conserva todos los documentos relevantes de las consultas de prueba y completa con documentos al azar (semilla fija); así la aplicación cabe en un servicio gratuito de 512 MB.
 
-**URL del despliegue:** _(pendiente — completar al desplegar; ver `GUIA_DESPLIEGUE_RENDER.md`)_
+**URL del despliegue:**
+https://sistema-recuperacion-informacion.onrender.com/
 
 ## Modelos
 
-| Modelo | Implementación |
-|---|---|
-| Binario | Similitud **Jaccard** sobre vectores binarios de términos (propia, sobre el índice invertido) |
-| Vectorial TF-IDF | **Coseno** con TF-IDF (tf = 1 + log f; idf = log(1 + N/df)) (propia) |
-| Probabilístico | **BM25** (k1 = 1.5, b = 0.75) (propia) |
+| Modelo                   | Implementación                                                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Binario                  | Similitud **Jaccard** sobre vectores binarios de términos (propia, sobre el índice invertido)                                       |
+| Vectorial TF-IDF         | **Coseno** con TF-IDF (tf = 1 + log f; idf = log(1 + N/df)) (propia)                                                                |
+| Probabilístico           | **BM25** (k1 = 1.5, b = 0.75) (propia)                                                                                              |
 | Vectorial con embeddings | `all-MiniLM-L6-v2` en formato ONNX (fastembed, sin PyTorch) + búsqueda en **FAISS** (`IndexFlatIP`, vectores normalizados = coseno) |
 
 Procesamiento de texto: minúsculas, tokenización por regex (`[a-z0-9]+`), stopwords en inglés (lista de NLTK guardada en `datos/stopwords.json`) y stemming Porter. El **índice invertido** guarda, por término, los documentos donde aparece y su frecuencia. No se usa ningún motor de búsqueda (Elasticsearch, Solr, Whoosh).
