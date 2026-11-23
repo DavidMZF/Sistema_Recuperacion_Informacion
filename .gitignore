@@ -1,0 +1,15 @@
+# Datos crudos de FiQA (se bajan con descargar_datos.py)
+data/
+# Caché del modelo de embeddings (se descarga en el build)
+modelo_cache/
+# Entornos y cachés
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+__pycache__/
+data/
+modelo_cache/
+*.rar
